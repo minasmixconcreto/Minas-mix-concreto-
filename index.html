@@ -1,0 +1,1053 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financeiro & Vendas - PayDash</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Configuração de Cores -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.25s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased h-screen flex overflow-hidden">
+
+    <!-- Notificação Toast Flutuante -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 ease-in-out bg-gray-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-gray-700 pointer-events-none opacity-0">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-sm font-medium">Ação realizada com sucesso!</span>
+    </div>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="mobileOverlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 hidden md:hidden transition-opacity"></div>
+
+    <!-- Sidebar (Menu Lateral) -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <!-- Logo -->
+        <div class="h-16 flex items-center justify-between px-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fa-solid fa-wallet text-brand-600 text-2xl mr-3"></i>
+                <span class="text-xl font-bold text-gray-900 tracking-tight">PayDash</span>
+            </div>
+            <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-500 hover:text-gray-700">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Links de Navegação -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg bg-brand-50 text-brand-600 transition-colors group">
+                <i class="fa-solid fa-boxes-stacked w-5 text-center mr-3 text-brand-500"></i>
+                Catálogo de Produtos
+            </button>
+
+            <button onclick="switchTab('payment')" id="nav-payment" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group">
+                <i class="fa-solid fa-file-invoice-dollar w-5 text-center mr-3 text-gray-400 group-hover:text-gray-500 transition-colors"></i>
+                Gerar Pagamento
+            </button>
+
+            <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group">
+                <i class="fa-solid fa-chart-pie w-5 text-center mr-3 text-gray-400 group-hover:text-gray-500 transition-colors"></i>
+                Visão Geral
+            </button>
+
+            <button onclick="switchTab('clients')" id="nav-clients" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group">
+                <i class="fa-solid fa-users w-5 text-center mr-3 text-gray-400 group-hover:text-gray-500 transition-colors"></i>
+                Clientes
+            </button>
+
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group">
+                <i class="fa-solid fa-gear w-5 text-center mr-3 text-gray-400 group-hover:text-gray-500 transition-colors"></i>
+                Configurações
+            </button>
+        </nav>
+
+        <!-- Orçamento Ativo na Sidebar -->
+        <div id="sidebarCartBadge" class="p-3 mx-3 mb-3 bg-brand-50 rounded-xl border border-brand-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center text-xs font-bold">
+                    <span id="cartCountBadge">0</span>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-brand-900">Orçamento da Obra</p>
+                    <p id="cartTotalBadge" class="text-xs text-brand-700 font-semibold">R$ 0,00</p>
+                </div>
+            </div>
+            <button onclick="openCartDrawer()" class="text-xs text-brand-700 font-bold hover:underline">Ver</button>
+        </div>
+
+        <!-- Perfil do Usuário na base do menu -->
+        <div class="p-4 border-t border-gray-200">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-bold text-sm">
+                    V
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-700">Vendedor Técnico</p>
+                    <p class="text-xs text-gray-500">vendas.obra@paydash.com</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Área Principal de Conteúdo -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 relative">
+        
+        <!-- Header (Cabeçalho) -->
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10">
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h1 id="pageTitle" class="text-lg font-semibold text-gray-900">Catálogo de Produtos e Materiais</h1>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button onclick="openCartDrawer()" class="relative bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-cart-shopping text-brand-600"></i>
+                    <span class="hidden sm:inline">Orçamento da Obra</span>
+                    <span id="cartHeaderBadge" class="bg-brand-600 text-white rounded-full px-2 py-0.5 text-[10px] font-bold">0</span>
+                </button>
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Modo Vendedor
+                </span>
+            </div>
+        </header>
+
+        <!-- Conteúdo Rolável -->
+        <div class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 no-scrollbar">
+            
+            <!-- Banner Informativo: Nenhuma Forma de Pagamento Integrada -->
+            <div id="noGatewayBanner" class="max-w-7xl mx-auto mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 font-bold text-base">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-sm font-bold text-amber-900">Nenhuma forma de pagamento integrada</h4>
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-200/80 text-amber-800">Modo Demonstração</span>
+                        </div>
+                        <p class="text-xs text-amber-700 mt-0.5">O site está operando sem faturamento ativo. Os links e cobranças gerados são simulações até que um meio de pagamento seja conectado.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 1: CATÁLOGO DE PRODUTOS -->
+            <section id="section-catalog" class="max-w-7xl mx-auto space-y-6 fade-in">
+                
+                <!-- Topo e Ações Principais -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Catálogo de Massas, Pré-Moldados e Serviços</h2>
+                        <p class="mt-1 text-sm text-gray-500">Selecione os materiais, adicione ao orçamento da obra ou monte uma cobrança direta.</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <button onclick="openAddProductModal()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium text-xs px-3.5 py-2 rounded-lg shadow-sm flex items-center gap-2 transition-colors">
+                            <i class="fa-solid fa-plus"></i> Novo Material / Produto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Busca, Ordenação e Filtros -->
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+                    
+                    <!-- Busca -->
+                    <div class="relative flex-grow max-w-md">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="catalogSearch" oninput="filterAndSortCatalog()" placeholder="Buscar por concreto, argamassa, pré-moldado, SKU..."
+                            class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
+                    </div>
+
+                    <!-- Controles de Filtro, Ordenação e Exibição -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        
+                        <!-- Seletor de Categoria -->
+                        <div class="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+                            <button onclick="filterCategory('all', this)" class="cat-btn active px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white whitespace-nowrap">Todos</button>
+                            <button onclick="filterCategory('Argamassas', this)" class="cat-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap">Argamassas</button>
+                            <button onclick="filterCategory('Concreto', this)" class="cat-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap">Concreto Usinado</button>
+                            <button onclick="filterCategory('Pré-Moldados', this)" class="cat-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap">Pré-Moldados</button>
+                            <button onclick="filterCategory('Contratos', this)" class="cat-btn px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap">Contratos</button>
+                        </div>
+
+                        <!-- Dropdown de Ordenação -->
+                        <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+                            <i class="fa-solid fa-arrow-down-short-wide text-gray-400 text-xs"></i>
+                            <select id="sortSelect" onchange="filterAndSortCatalog()" class="bg-transparent text-xs text-gray-700 font-medium focus:outline-none cursor-pointer">
+                                <option value="default">Ordenação Padrão</option>
+                                <option value="price-asc">Menor Preço</option>
+                                <option value="price-desc">Maior Preço</option>
+                                <option value="commission-desc">Maior Comissão (%)</option>
+                                <option value="name-asc">Nome (A-Z)</option>
+                            </select>
+                        </div>
+
+                        <!-- Modos de Exibição (Grade vs Tabela) -->
+                        <div class="flex items-center border border-gray-200 rounded-lg bg-gray-50 p-0.5">
+                            <button onclick="setViewMode('grid')" id="viewGridBtn" class="p-1.5 rounded text-brand-600 bg-white shadow-xs" title="Exibição em Grade">
+                                <i class="fa-solid fa-grip-vertical text-xs"></i>
+                            </button>
+                            <button onclick="setViewMode('table')" id="viewTableBtn" class="p-1.5 rounded text-gray-500 hover:text-gray-800" title="Exibição em Lista / Tabela">
+                                <i class="fa-solid fa-list text-xs"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Container onde a lista de produtos é renderizada (Grid ou Tabela) -->
+                <div id="productContainer">
+                    <!-- Dinâmico via JS -->
+                </div>
+
+                <!-- Mensagem quando nenhum produto é encontrado -->
+                <div id="noProductsMsg" class="hidden text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-solid fa-box-open text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500 text-sm font-medium">Nenhum produto encontrado para estes filtros.</p>
+                </div>
+            </section>
+
+            <!-- SEÇÃO 2: GERADOR DE PAGAMENTOS -->
+            <section id="section-payment" class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 fade-in hidden">
+                
+                <div class="mb-8 border-b border-gray-100 pb-5 flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Novo Link de Pagamento</h2>
+                        <p class="mt-2 text-sm text-gray-500">Gere links para cobrança direta de materiais ou orçamentos completos da obra.</p>
+                    </div>
+                    <span id="selectedProductBadge" class="hidden text-xs bg-brand-50 text-brand-700 font-semibold px-2.5 py-1 rounded-full border border-brand-200">
+                        <i class="fa-solid fa-tag mr-1"></i> Item Selecionado
+                    </span>
+                </div>
+
+                <!-- Formulário -->
+                <form id="paymentForm" class="space-y-6">
+                    <div>
+                        <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente ou Obra</label>
+                        <div class="relative rounded-md shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-regular fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="customerName" name="customerName" required placeholder="Ex: Construtora Silva & Filhos - Obra Centro"
+                                class="focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2.5 border transition-colors outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Valor Total da Cobrança</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">R$</span>
+                                </div>
+                                <input type="number" step="0.01" min="0.01" id="amount" name="amount" required placeholder="0,00"
+                                    class="focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2.5 border transition-colors outline-none font-semibold text-gray-900">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="dueDate" class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                            <div class="relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-regular fa-calendar text-gray-400"></i>
+                                </div>
+                                <input type="date" id="dueDate" name="dueDate" required
+                                    class="focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2.5 border transition-colors outline-none text-gray-700">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Detalhamento / Especificações dos Materiais</label>
+                        <textarea id="description" name="description" rows="4" placeholder="Ex: Fornecimento de 15m³ de Concreto FCK 25 MPa + 2 Paletes de Argamassa ACIII..."
+                            class="shadow-sm focus:ring-brand-500 focus:border-brand-500 block w-full sm:text-sm border border-gray-300 rounded-lg py-2.5 px-3 transition-colors outline-none resize-none"></textarea>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" id="generateBtn"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none transition-all duration-200">
+                            <i class="fa-solid fa-link mr-2 self-center"></i> Gerar Link de Pagamento
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Área do Link Gerado -->
+                <div id="resultArea" class="mt-8 hidden fade-in border-t border-gray-100 pt-6">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <i class="fa-solid fa-circle-check text-emerald-500 mt-0.5 text-lg"></i>
+                            </div>
+                            <div class="ml-3 w-full">
+                                <div class="flex items-center justify-between flex-wrap gap-2">
+                                    <h3 class="text-sm font-medium text-emerald-800">Link de pagamento gerado (Modo Simulação)</h3>
+                                    <span class="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded font-bold">
+                                        <i class="fa-solid fa-circle-info mr-1"></i> Sem Faturamento Real
+                                    </span>
+                                </div>
+                                <p class="text-xs text-emerald-700 mt-1">Envie o link de teste para o cliente. *(Nota: Não haverá transação financeira real pois nenhuma forma de pagamento está integrada).*</p>
+                                
+                                <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                                    <div class="relative flex-grow">
+                                        <input type="text" readonly id="generatedLink" value="" 
+                                            class="block w-full bg-white border border-emerald-300 rounded-lg py-2 px-3 text-sm text-gray-700 focus:outline-none font-mono">
+                                    </div>
+                                    <button type="button" onclick="copyToClipboard()" id="copyBtn"
+                                        class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none transition-colors">
+                                        <i class="fa-regular fa-copy mr-2"></i> Copiar Link
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SEÇÕES SECUNDÁRIAS (Placeholders) -->
+            <section id="section-overview" class="max-w-7xl mx-auto space-y-6 fade-in hidden">
+                <div class="bg-white p-8 rounded-2xl border border-gray-200 text-center py-16">
+                    <div class="w-16 h-16 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-chart-line text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Visão Geral de Vendas da Obra</h3>
+                    <p class="text-gray-500 text-sm max-w-md mx-auto">Relatório consolidado de vendas de concreto, argamassas e faturamento acumulado por comissão.</p>
+                </div>
+            </section>
+
+            <section id="section-clients" class="max-w-7xl mx-auto space-y-6 fade-in hidden">
+                <div class="bg-white p-8 rounded-2xl border border-gray-200 text-center py-16">
+                    <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-address-book text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Carteira de Clientes e Construtoras</h3>
+                    <p class="text-gray-500 text-sm max-w-md mx-auto">Histórico de obras atendidas, engenheiros responsáveis e pedidos recorrentes.</p>
+                </div>
+            </section>
+
+            <section id="section-settings" class="max-w-7xl mx-auto space-y-6 fade-in hidden">
+                <div class="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-sm space-y-6">
+                    <div class="border-b border-gray-100 pb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Integração de Meios de Pagamento</h3>
+                            <p class="text-xs text-gray-500 mt-1">Conecte sua conta Pix ou gateway de pagamento para habilitar cobranças reais.</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Nenhuma Integração Ativa
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Card Pix -->
+                        <div class="border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-brand-300 transition-colors bg-gray-50/50">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                                    <i class="fa-brands fa-pix"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900">Pix Direto / QR Code</h4>
+                                    <p class="text-xs text-gray-500">Status: <span class="text-amber-600 font-semibold">Pendente</span></p>
+                                </div>
+                            </div>
+                            <button onclick="showToast('Aba de integração Pix em desenvolvimento', 'fa-info-circle text-brand-500')" class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-xs font-semibold rounded-lg text-gray-700">Conectar</button>
+                        </div>
+
+                        <!-- Card Cartão & Boleto -->
+                        <div class="border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-brand-300 transition-colors bg-gray-50/50">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                                    <i class="fa-regular fa-credit-card"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900">Gateway (Cartão & Boleto)</h4>
+                                    <p class="text-xs text-gray-500">Status: <span class="text-amber-600 font-semibold">Desconectado</span></p>
+                                </div>
+                            </div>
+                            <button onclick="showToast('Aba de integração de Cartão em desenvolvimento', 'fa-info-circle text-brand-500')" class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-xs font-semibold rounded-lg text-gray-700">Conectar</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Drawer / Modal do Orçamento (Carrinho de Materiais da Obra) -->
+    <div id="cartDrawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div onclick="closeCartDrawer()" class="absolute inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity"></div>
+        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-white flex flex-col shadow-2xl border-l border-gray-200">
+                <div class="p-5 bg-gray-900 text-white flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-cart-flatbed text-brand-400 text-xl"></i>
+                        <h3 class="font-bold text-base">Orçamento da Obra</h3>
+                    </div>
+                    <button onclick="closeCartDrawer()" class="text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div id="cartItemsList" class="flex-1 overflow-y-auto p-5 space-y-4">
+                    <!-- Itens via JS -->
+                </div>
+
+                <!-- Rodapé do Carrinho com Totais -->
+                <div class="p-5 bg-gray-50 border-t border-gray-200 space-y-3">
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>Comissão Total Estimada:</span>
+                        <span id="cartTotalCommission" class="font-bold text-emerald-600">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-base font-extrabold text-gray-900 pt-2 border-t border-gray-200">
+                        <span>Total do Orçamento:</span>
+                        <span id="cartTotalPrice" class="text-xl text-brand-600">R$ 0,00</span>
+                    </div>
+                    <button onclick="checkoutCart()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg text-sm shadow-md transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-invoice-dollar"></i> Gerar Cobrança do Orçamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Adicionar Novo Produto ao Catálogo -->
+    <div id="addProductModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4 border border-gray-100">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-900">Cadastrar Novo Produto / Material</h3>
+                <button onclick="closeAddProductModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="newProductForm" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Título do Produto / Material</label>
+                    <input type="text" id="newTitle" required placeholder="Ex: Argamassa Piso sobre Piso ACIII-E" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">SKU / Código</label>
+                        <input type="text" id="newSku" required placeholder="Ex: ARG-PP-07" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria</label>
+                        <select id="newCategory" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500 bg-white">
+                            <option value="Argamassas">Argamassas</option>
+                            <option value="Concreto">Concreto Usinado</option>
+                            <option value="Pré-Moldados">Pré-Moldados</option>
+                            <option value="Contratos">Contratos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Preço (R$)</label>
+                        <input type="number" step="0.01" id="newPrice" required placeholder="185.00" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Comissão (%)</label>
+                        <input type="number" step="0.1" id="newCommission" required placeholder="8.5" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Tag / Selo</label>
+                    <input type="text" id="newBadge" placeholder="Ex: Pronta Entrega / Sob Medida" class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Descrição</label>
+                    <textarea id="newDescription" rows="2" placeholder="Especificações técnicas resumidas..." class="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500 resize-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeAddProductModal()" class="px-4 py-2 border text-xs font-medium rounded-lg text-gray-600 hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-brand-600 text-white text-xs font-bold rounded-lg hover:bg-brand-700">Salvar Material</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Dados do Catálogo de Construção Civil
+        let productsData = [
+            {
+                id: 'prod-001',
+                sku: 'ARG-AC3-01',
+                title: 'Argamassa Pronta Especial ACIII (Palete 50 Sacos)',
+                category: 'Argamassas',
+                price: 1850.00,
+                commissionPercent: 8.0,
+                unit: 'palete',
+                badge: 'Alta Demanda',
+                badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+                icon: 'fa-cubes-stacked',
+                iconBg: 'bg-amber-50 text-amber-600',
+                description: 'Argamassa de alto desempenho para assentamento e revestimento cerâmico e porcelanatos em grandes áreas.'
+            },
+            {
+                id: 'prod-002',
+                sku: 'CONC-25MPA-02',
+                title: 'Concreto Usinado FCK 25 MPa (Betoneira / m³)',
+                category: 'Concreto',
+                price: 380.00,
+                commissionPercent: 5.0,
+                unit: 'm³',
+                badge: 'Laje & Estrutura',
+                badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+                icon: 'fa-truck-front',
+                iconBg: 'bg-blue-50 text-blue-600',
+                description: 'Preparo e fornecimento de concreto usinado com controle tecnológico de resistência para lajes e vigas.'
+            },
+            {
+                id: 'prod-003',
+                sku: 'PRE-BLOC-03',
+                title: 'Blocos Estruturais Pré-Moldados de Concreto (Milheiro)',
+                category: 'Pré-Moldados',
+                price: 3450.00,
+                commissionPercent: 7.5,
+                unit: 'milheiro',
+                badge: 'Pré-Moldado',
+                badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+                icon: 'fa-cubes',
+                iconBg: 'bg-purple-50 text-purple-600',
+                description: 'Blocos de concreto pré-moldados prensados sob vibração para alvenaria estrutural e vedação.'
+            },
+            {
+                id: 'prod-004',
+                sku: 'PRE-MUR-04',
+                title: 'Muro Pré-Moldado Placas e Placotas (Metro Linear)',
+                category: 'Pré-Moldados',
+                price: 195.00,
+                commissionPercent: 10.0,
+                unit: 'metro linear',
+                badge: 'Fechamento de Obra',
+                badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                icon: 'fa-border-all',
+                iconBg: 'bg-emerald-50 text-emerald-600',
+                description: 'Painéis e mourões pré-moldados em concreto armado para cercamento e fechamento rápido de galpões.'
+            },
+            {
+                id: 'prod-005',
+                sku: 'CTR-OBRA-05',
+                title: 'Contrato de Fornecimento Contínuo para Obra (Mensal)',
+                category: 'Contratos',
+                price: 12500.00,
+                commissionPercent: 4.0,
+                unit: 'mês',
+                badge: 'Comissão Recorrente',
+                badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+                icon: 'fa-file-signature',
+                iconBg: 'bg-indigo-50 text-indigo-600',
+                description: 'Fornecimento programado mensal de massas, concretos e pré-moldados sob contrato de empreitada.'
+            },
+            {
+                id: 'prod-006',
+                sku: 'ARG-REB-06',
+                title: 'Massa Leve Pronta para Reboco e Emboço (Saco 50kg)',
+                category: 'Argamassas',
+                price: 32.50,
+                commissionPercent: 12.0,
+                unit: 'saco',
+                badge: 'Giro Rápido',
+                badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+                icon: 'fa-fill-drip',
+                iconBg: 'bg-rose-50 text-rose-600',
+                description: 'Massa de argamassa mista estabilizada, ideal para acabamento interno e externo em paredes e tetos.'
+            }
+        ];
+
+        let selectedCategory = 'all';
+        let currentViewMode = 'grid'; // 'grid' ou 'table'
+        let cart = []; // Carrinho de compras do orçamento
+
+        // Notificação Toast Customizada
+        function showToast(msg, iconClass = 'fa-circle-check text-emerald-400') {
+            const toast = document.getElementById('toastNotification');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            toastIcon.className = `fa-solid ${iconClass} text-lg`;
+
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            toast.classList.add('translate-x-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                toast.classList.remove('translate-x-0', 'opacity-100');
+            }, 2500);
+        }
+
+        // Alternar modo de visualização
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            const gridBtn = document.getElementById('viewGridBtn');
+            const tableBtn = document.getElementById('viewTableBtn');
+
+            if (mode === 'grid') {
+                gridBtn.className = "p-1.5 rounded text-brand-600 bg-white shadow-xs";
+                tableBtn.className = "p-1.5 rounded text-gray-500 hover:text-gray-800";
+            } else {
+                tableBtn.className = "p-1.5 rounded text-brand-600 bg-white shadow-xs";
+                gridBtn.className = "p-1.5 rounded text-gray-500 hover:text-gray-800";
+            }
+
+            filterAndSortCatalog();
+        }
+
+        // Filtrar e Ordenar Catálogo
+        function filterAndSortCatalog() {
+            const query = document.getElementById('catalogSearch').value.toLowerCase().trim();
+            const sortVal = document.getElementById('sortSelect').value;
+
+            // 1. Filtragem
+            let filtered = productsData.filter(p => {
+                const matchesSearch = p.title.toLowerCase().includes(query) || 
+                                     p.sku.toLowerCase().includes(query) || 
+                                     p.category.toLowerCase().includes(query);
+                const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
+                return matchesSearch && matchesCat;
+            });
+
+            // 2. Ordenação
+            if (sortVal === 'price-asc') {
+                filtered.sort((a, b) => a.price - b.price);
+            } else if (sortVal === 'price-desc') {
+                filtered.sort((a, b) => b.price - a.price);
+            } else if (sortVal === 'commission-desc') {
+                filtered.sort((a, b) => b.commissionPercent - a.commissionPercent);
+            } else if (sortVal === 'name-asc') {
+                filtered.sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            renderCatalogView(filtered);
+        }
+
+        function filterCategory(cat, btn) {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('bg-brand-600', 'text-white', 'active');
+                b.classList.add('bg-gray-100', 'text-gray-600');
+            });
+
+            btn.classList.remove('bg-gray-100', 'text-gray-600');
+            btn.classList.add('bg-brand-600', 'text-white', 'active');
+
+            filterAndSortCatalog();
+        }
+
+        // Renderizar Produtos (Visão Grade ou Tabela)
+        function renderCatalogView(products) {
+            const container = document.getElementById('productContainer');
+            const noMsg = document.getElementById('noProductsMsg');
+
+            container.innerHTML = '';
+
+            if (products.length === 0) {
+                noMsg.classList.remove('hidden');
+                return;
+            } else {
+                noMsg.classList.add('hidden');
+            }
+
+            if (currentViewMode === 'grid') {
+                // VISÃO EM GRADE (CARDS)
+                const grid = document.createElement('div');
+                grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+
+                products.forEach(p => {
+                    const commissionVal = (p.price * (p.commissionPercent / 100)).toFixed(2).replace('.', ',');
+                    const formattedPrice = p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group";
+                    card.innerHTML = `
+                        <div class="p-5">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="w-11 h-11 rounded-lg ${p.iconBg} flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid ${p.icon}"></i>
+                                </div>
+                                <span class="text-xs px-2.5 py-1 rounded-full border font-semibold ${p.badgeColor}">
+                                    ${p.badge}
+                                </span>
+                            </div>
+                            
+                            <div class="text-xs text-gray-400 font-medium mb-1">SKU: ${p.sku} • ${p.category}</div>
+                            <h3 class="text-base font-bold text-gray-900 group-hover:text-brand-600 transition-colors line-clamp-1">${p.title}</h3>
+                            <p class="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">${p.description}</p>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs text-gray-400 block">Preço de Tabela</span>
+                                    <span class="text-lg font-extrabold text-gray-900">R$ ${formattedPrice}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs text-emerald-600 font-semibold block">Sua Comissão (${p.commissionPercent}%)</span>
+                                    <span class="text-sm font-bold text-emerald-700">R$ ${commissionVal}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2">
+                            <button onclick="addToCart('${p.id}')" class="flex-1 py-2 px-3 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold rounded-lg border border-brand-200 transition-colors flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-cart-plus"></i> + Orçamento
+                            </button>
+                            <button onclick="checkoutProduct('${p.id}')" class="py-2 px-3 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1" title="Cobrar Apenas Este Produto">
+                                <i class="fa-solid fa-receipt"></i> Cobrar
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+                container.appendChild(grid);
+
+            } else {
+                // VISÃO EM TABELA / LISTA ESTRUTURADA
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = "bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm";
+
+                let rowsHtml = products.map(p => {
+                    const commissionVal = (p.price * (p.commissionPercent / 100)).toFixed(2).replace('.', ',');
+                    const formattedPrice = p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+                    return `
+                        <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-sm">
+                            <td class="px-4 py-3 font-mono text-xs text-gray-500">${p.sku}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-bold text-gray-900">${p.title}</div>
+                                <div class="text-xs text-gray-400">${p.category}</div>
+                            </td>
+                            <td class="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">R$ ${formattedPrice}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="text-emerald-700 font-bold">R$ ${commissionVal}</span>
+                                <span class="text-xs text-emerald-600">(${p.commissionPercent}%)</span>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="text-xs px-2 py-0.5 rounded-full border ${p.badgeColor}">${p.badge}</span>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <button onclick="addToCart('${p.id}')" class="px-2.5 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold rounded border border-brand-200 transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-plus"></i> Orçamento
+                                    </button>
+                                    <button onclick="checkoutProduct('${p.id}')" class="px-2.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded shadow-xs transition-colors">
+                                        Cobrar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tableWrapper.innerHTML = `
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase font-semibold">
+                                <th class="px-4 py-3">SKU</th>
+                                <th class="px-4 py-3">Produto / Material</th>
+                                <th class="px-4 py-3">Preço</th>
+                                <th class="px-4 py-3">Sua Comissão</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(tableWrapper);
+            }
+        }
+
+        // LÓGICA DO CARRINHO DE ORÇAMENTO
+        function addToCart(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+
+            const existing = cart.find(item => item.id === productId);
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+
+            updateCartUI();
+            showToast(`"${product.title}" adicionado ao orçamento!`);
+        }
+
+        function removeFromCart(productId) {
+            cart = cart.filter(item => item.id !== productId);
+            updateCartUI();
+        }
+
+        function updateItemQty(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    removeFromCart(productId);
+                } else {
+                    updateCartUI();
+                }
+            }
+        }
+
+        function updateCartUI() {
+            const count = cart.reduce((acc, i) => acc + i.qty, 0);
+            const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            const commission = cart.reduce((acc, i) => acc + ((i.price * (i.commissionPercent/100)) * i.qty), 0);
+
+            document.getElementById('cartCountBadge').innerText = count;
+            document.getElementById('cartHeaderBadge').innerText = count;
+            document.getElementById('cartTotalBadge').innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('cartTotalPrice').innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('cartTotalCommission').innerText = `R$ ${commission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+            // Renderizar itens no drawer
+            const cartList = document.getElementById('cartItemsList');
+            if (cart.length === 0) {
+                cartList.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fa-solid fa-cart-flatbed text-4xl mb-2"></i>
+                        <p class="text-sm">Nenhum material no orçamento da obra.</p>
+                    </div>
+                `;
+            } else {
+                cartList.innerHTML = cart.map(item => `
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-bold text-gray-900 truncate">${item.title}</h4>
+                            <p class="text-[11px] text-gray-500">R$ ${item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / un</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateItemQty('${item.id}', -1)" class="w-6 h-6 rounded bg-white border border-gray-300 text-xs font-bold text-gray-600 hover:bg-gray-100 flex items-center justify-center">-</button>
+                            <span class="text-xs font-bold text-gray-800 w-4 text-center">${item.qty}</span>
+                            <button onclick="updateItemQty('${item.id}', 1)" class="w-6 h-6 rounded bg-white border border-gray-300 text-xs font-bold text-gray-600 hover:bg-gray-100 flex items-center justify-center">+</button>
+                            <button onclick="removeFromCart('${item.id}')" class="text-gray-400 hover:text-red-500 ml-1 text-xs">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function openCartDrawer() {
+            document.getElementById('cartDrawer').classList.remove('hidden');
+        }
+
+        function closeCartDrawer() {
+            document.getElementById('cartDrawer').classList.add('hidden');
+        }
+
+        // Finalizar cobrança a partir do carrinho
+        function checkoutCart() {
+            if (cart.length === 0) {
+                showToast("Adicione materiais ao orçamento primeiro!", "fa-circle-exclamation text-amber-400");
+                return;
+            }
+
+            const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+            const summary = cart.map(i => `${i.qty}x ${i.title} (SKU: ${i.sku})`).join('\n');
+
+            document.getElementById('amount').value = total.toFixed(2);
+            document.getElementById('description').value = `Orçamento da Obra:\n${summary}`;
+            document.getElementById('selectedProductBadge').classList.remove('hidden');
+
+            closeCartDrawer();
+            switchTab('payment');
+            showToast("Orçamento transferido para o gerador de pagamento!");
+        }
+
+        // Cobrar apenas 1 produto do catálogo
+        function checkoutProduct(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+
+            document.getElementById('amount').value = product.price.toFixed(2);
+            document.getElementById('description').value = `${product.title} (SKU: ${product.sku})`;
+            document.getElementById('selectedProductBadge').classList.remove('hidden');
+
+            switchTab('payment');
+            showToast(`Preenchido com "${product.title}"`);
+        }
+
+        // Modais de Cadastro de Novo Produto
+        function openAddProductModal() {
+            document.getElementById('addProductModal').classList.remove('hidden');
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('addProductModal').classList.add('hidden');
+            document.getElementById('newProductForm').reset();
+        }
+
+        document.getElementById('newProductForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('newTitle').value;
+            const sku = document.getElementById('newSku').value;
+            const category = document.getElementById('newCategory').value;
+            const price = parseFloat(document.getElementById('newPrice').value);
+            const commission = parseFloat(document.getElementById('newCommission').value);
+            const badge = document.getElementById('newBadge').value || 'Sob Encomenda';
+            const description = document.getElementById('newDescription').value;
+
+            const newProd = {
+                id: `prod-${Date.now()}`,
+                sku,
+                title,
+                category,
+                price,
+                commissionPercent: commission,
+                badge,
+                badgeColor: 'bg-brand-100 text-brand-800 border-brand-200',
+                icon: 'fa-box',
+                iconBg: 'bg-brand-50 text-brand-600',
+                description
+            };
+
+            productsData.unshift(newProd);
+            filterAndSortCatalog();
+            closeAddProductModal();
+            showToast("Novo produto cadastrado com sucesso!");
+        });
+
+        // NAVEGAÇÃO SPA (Single Page Application)
+        const tabTitles = {
+            'catalog': 'Catálogo de Produtos e Materiais',
+            'payment': 'Painel de Cobranças',
+            'overview': 'Visão Geral',
+            'clients': 'Gestão de Clientes',
+            'settings': 'Configurações'
+        };
+
+        function switchTab(tabKey) {
+            document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-50', 'text-brand-600');
+                btn.classList.add('text-gray-600');
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-brand-500');
+                    icon.classList.add('text-gray-400');
+                }
+            });
+
+            const activeSec = document.getElementById(`section-${tabKey}`);
+            if (activeSec) activeSec.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`nav-${tabKey}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-brand-50', 'text-brand-600');
+                activeBtn.classList.remove('text-gray-600');
+                const icon = activeBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.add('text-brand-500');
+                    icon.classList.remove('text-gray-400');
+                }
+            }
+
+            if (tabTitles[tabKey]) {
+                document.getElementById('pageTitle').innerText = tabTitles[tabKey];
+            }
+
+            closeMobileSidebar();
+        }
+
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('mobileOverlay').classList.toggle('hidden');
+        }
+
+        function closeMobileSidebar() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('mobileOverlay').classList.add('hidden');
+        }
+
+        // Submissão do Gerador de Pagamentos
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dueDate').setAttribute('min', today);
+        document.getElementById('dueDate').value = today;
+
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('generateBtn');
+            const originalText = btn.innerHTML;
+            const resultArea = document.getElementById('resultArea');
+            const generatedLinkInput = document.getElementById('generatedLink');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Gerando Cobrança...';
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            
+            resultArea.classList.add('hidden');
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+
+                const randomHash = Math.random().toString(36).substring(2, 10).toUpperCase();
+                const link = `https://paydash.app/pgto/${randomHash}`;
+                
+                generatedLinkInput.value = link;
+                resultArea.classList.remove('hidden');
+                showToast("Link de pagamento gerado!");
+            }, 700);
+        });
+
+        function copyToClipboard() {
+            const linkInput = document.getElementById('generatedLink');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                showToast("Link copiado para a área de transferência!");
+            } catch (err) {
+                showToast("Erro ao copiar o link", "fa-circle-xmark text-red-400");
+            }
+        }
+
+        // Renderização Inicial
+        window.addEventListener('DOMContentLoaded', () => {
+            filterAndSortCatalog();
+            updateCartUI();
+        });
+    </script>
+</body>
+</html>
+```
